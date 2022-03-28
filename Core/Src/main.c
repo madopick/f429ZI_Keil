@@ -19,6 +19,8 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "cramel.h"
+#include "dwt_counter.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -48,6 +50,10 @@
 
 /* Private variables ---------------------------------------------------------*/
 UART_HandleTypeDef huart3;
+
+int16_t s16_curfitLine[RX_LEN];
+float f32_curfitLine[RX_LEN];
+
 
 /* USER CODE BEGIN PV */
 struct __FILE
@@ -95,7 +101,16 @@ static void MX_USART3_UART_Init(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
+	curfitCoef_t curfitCoef;
+  uint64_t u64_bitmap;
 
+  int16_t *s16_src;
+  uint8_t *u8_curfitComp;
+  float *f32_curfitLineRef;
+  float f32_snr;
+  float f32_accuracy;
+  volatile float f32_duration = 0;
+  volatile float f32_accuracyFrame = 0;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -118,9 +133,46 @@ int main(void)
   MX_GPIO_Init();
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
-	printf("INIT KEIL TEST OK\r\n");
-  /* USER CODE END 2 */
+	SystemCoreClockUpdate();
+  printf("\r\nINIT OK @ %d MHz\r\n",(uint32_t)SystemCoreClock/1000000);
+	
+	for (uint8_t u8_i = 0; u8_i < TX_LEN; u8_i++)
+  {
+	  /* Set data */
+	  s16_src = (int16_t*) &s16_reconstructed[u8_i];
+	  u8_curfitComp = (uint8_t*) &u8_curvefitCompare[u8_i];
+	  f32_curfitLineRef = (float*) &f32_curvefitLineRef[u8_i];
+	  u64_bitmap = u64Func_GetBitmap(u8_curfitComp, RX_LEN);
 
+	  /* Start timer */
+	  DWT_Start();
+
+	  /* Estimate */
+	  vFunc_CurfitEstimation(s16_src, &curfitCoef, RX_LEN, u64_bitmap);
+	  vFunc_GetCurveFitLine(s16_curfitLine, &curfitCoef, RX_LEN);
+
+	  /* Stop timer */
+	  f32_duration += DWT_GetTime_us();
+	  DWT_Stop();
+
+	  /* Calculate accuracy */
+	  vFunc_ConvertS16toFloat(s16_curfitLine, f32_curfitLine, RX_LEN);
+	  //f32_snr = arm_snr_f32(f32_curfitLineRef, f32_curfitLine, RX_LEN);
+	  //f32_accuracy = 100.0f - (100.0f / f32_snr);
+	  f32_accuracyFrame += f32_accuracy;
+
+	  /* Print to stdout */
+	  printf("Accuracy TX[%d]: %.2f %%\r\n", u8_i, f32_accuracy);
+  }
+	
+	f32_accuracyFrame /= TX_LEN;
+  f32_duration /= 1000;
+
+  printf("\r\n");
+  printf("Frame Accuracy: %.2f %%\r\n", f32_accuracyFrame);
+  printf("Frame Duration: %.2f ms\r\n", f32_duration);
+  /* USER CODE END 2 */
+	
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)

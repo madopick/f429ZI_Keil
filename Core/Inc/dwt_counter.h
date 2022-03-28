@@ -57,3 +57,4 @@ __STATIC_INLINE float DWT_GetTime_ns(void)
 }
 
 #endif /* STM32F4XX_DWT_COUNTER_DWT_COUNTER_H_ */
+
