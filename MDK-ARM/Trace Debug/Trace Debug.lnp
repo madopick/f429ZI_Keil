@@ -3,6 +3,8 @@
 "trace debug\main.o"
 "trace debug\stm32f4xx_it.o"
 "trace debug\stm32f4xx_hal_msp.o"
+"trace debug\data.o"
+"trace debug\util.o"
 "trace debug\stm32f4xx_hal_tim.o"
 "trace debug\stm32f4xx_hal_tim_ex.o"
 "trace debug\stm32f4xx_hal_uart.o"
