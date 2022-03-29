@@ -10,7 +10,7 @@
 
 #include "data.h"
 
-//#define VER2_UPDATE
+#define VER2_UPDATE
 
 typedef struct
 {

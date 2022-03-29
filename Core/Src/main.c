@@ -22,6 +22,7 @@
 #include "cramel.h"
 #include "dwt_counter.h"
 #include "math_helper.h"
+#include "core_cm4_simd.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -136,6 +137,12 @@ int main(void)
   /* USER CODE BEGIN 2 */
 	SystemCoreClockUpdate();
   printf("\r\nINIT ARMCC OK @ %d MHz\r\n",(uint32_t)SystemCoreClock/1000000);
+	
+	uint32_t val1, val2;
+	val1 = 1500;
+	val2 = 3500;
+	printf("\r\nSADD16 %d \r\n",__SADD16(val1, val2));
+
 	
 	for (uint8_t u8_i = 0; u8_i < TX_LEN; u8_i++)
   {
