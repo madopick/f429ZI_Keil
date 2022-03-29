@@ -8,8 +8,32 @@
 #include "cramel.h"
 #include <string.h>
 
+#ifdef VER2_UPDATE
+static uint8_t vFunc_GetMinVal(uint8_t *u8p_src, uint8_t u8_len);				//update cramel Jenn
+#endif
+
 static int64_t vFunc_GetMtrxDet3x3(int32_t *s32p_mtrx);
 static void vFunc_GetCoefByCramersRule(int32_t *s32p_arrA, int32_t *s32p_arrB, curfitCoef_t *p_curfitCoef);
+
+
+#ifdef VER2_UPDATE
+/********************************
+ * update cramel Jenn
+ ********************************/
+static uint8_t vFunc_GetMinVal(uint8_t *u8p_src, uint8_t u8_len)
+{
+  uint8_t u8_minVal;
+  u8_minVal = UINT8_MAX;
+
+  for (uint32_t i = u8_len; i--;)
+  {
+    u8_minVal = (u8_minVal < *(u8p_src + i)) ? u8_minVal : *(u8p_src + i);
+  }
+
+  return u8_minVal;
+}
+#endif
+
 
 /*
  *   @brief Computes determinant 3x3 matrix
@@ -42,6 +66,11 @@ static void vFunc_GetCoefByCramersRule(int32_t *s32p_arrA,
 {
   int32_t s32_matrix[9];
   int64_t s64_detA, s64_detC0, s64_detC1, s64_detC2;
+	
+#ifdef VER2_UPDATE
+  uint8_t u8_lzc[3]; //to store smallest number of leading zero count for the determinant (update cramel Jenn)
+  uint8_t u8_bsCnt; // The number of bit shift (update cramel Jenn)
+#endif
 
   // Calculate for Matrix A determinant
   s64_detA = vFunc_GetMtrxDet3x3(s32p_arrA);
@@ -68,10 +97,50 @@ static void vFunc_GetCoefByCramersRule(int32_t *s32p_arrA,
   s32_matrix[8] = s32p_arrB[2];
   s64_detC2 = vFunc_GetMtrxDet3x3(s32_matrix);
 
+#ifndef VER2_UPDATE
   p_curfitCoef->s64_c0 = s64_detC0;
   p_curfitCoef->s64_c1 = s64_detC1;
   p_curfitCoef->s64_c2 = s64_detC2;
   p_curfitCoef->s64_scale = s64_detA;
+#else
+  // Keep Sign information
+  p_curfitCoef->s8_signC0 = 1;
+  p_curfitCoef->s8_signC1 = 1;
+  p_curfitCoef->s8_signC2 = 1;
+  if (s64_detC0 < 0)
+  {
+    s64_detC0 = s64_detC0 * -1;
+    p_curfitCoef->s8_signC0 = -1;
+  }
+
+  if (s64_detC1 < 0)
+  {
+    s64_detC1 = s64_detC1 * -1;
+    p_curfitCoef->s8_signC1 = -1;
+  }
+
+  if (s64_detC2 < 0)
+  {
+    s64_detC2 = s64_detC2 * -1;
+    p_curfitCoef->s8_signC2 = -1;
+  }
+
+  // Scale
+  u8_lzc[0] = __clz ((uint32_t) (s64_detC0 >> 32));
+  u8_lzc[1] = __clz ((uint32_t) (s64_detC1 >> 32));
+  u8_lzc[2] = __clz ((uint32_t) (s64_detC2 >> 32));
+
+  u8_bsCnt = vFunc_GetMinVal(u8_lzc, 3) - 1; //minus 1 to avoid overflow to sign bit
+
+  s64_detC0 = s64_detC0 << u8_bsCnt;
+  s64_detC1 = s64_detC1 << u8_bsCnt;
+  s64_detC2 = s64_detC2 << u8_bsCnt;
+
+  p_curfitCoef->s64_c0 = s64_detC0 / s64_detA;
+  p_curfitCoef->s64_c1 = s64_detC1 / s64_detA;
+  p_curfitCoef->s64_c2 = s64_detC2 / s64_detA;
+  p_curfitCoef->u8_scale = u8_bsCnt;
+#endif
 }
 
 void vFunc_CurfitEstimation(int16_t *s16p_data, curfitCoef_t *p_curfitCoef, uint8_t u8_len, uint64_t u64_bitMap)
@@ -138,8 +207,16 @@ void vFunc_GetCurveFitLine(int16_t *s16p_dest, curfitCoef_t *p_curfitCoef, uint8
 
   for (int32_t u32_i = u8_len; u32_i--;)
   {
+#ifndef VER2_UPDATE
     s64_temp = p_curfitCoef->s64_c0 + (p_curfitCoef->s64_c1 * u32_i) + (p_curfitCoef->s64_c2 * u32_i * u32_i);
     s16p_dest[u32_i] = (int16_t) (s64_temp / p_curfitCoef->s64_scale);
+#else
+    s64_temp = (p_curfitCoef->s8_signC0 * p_curfitCoef->s64_c0)
+        + (p_curfitCoef->s8_signC1 * p_curfitCoef->s64_c1 * u32_i)
+        + (p_curfitCoef->s8_signC2 * p_curfitCoef->s64_c2 * u32_i * u32_i);
+
+    s16p_dest[u32_i] = (int16_t) (s64_temp >> p_curfitCoef->u8_scale);
+#endif
   }
 }
 

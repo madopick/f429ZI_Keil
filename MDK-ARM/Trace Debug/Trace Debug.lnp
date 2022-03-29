@@ -23,6 +23,7 @@
 "trace debug\stm32f4xx_hal.o"
 "trace debug\stm32f4xx_hal_exti.o"
 "trace debug\system_stm32f4xx.o"
+"trace debug\math_helper.o"
 --strict --scatter "Trace Debug\Trace Debug.sct"
 --summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
 --info sizes --info totals --info unused --info veneers

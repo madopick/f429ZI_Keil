@@ -21,6 +21,7 @@
 #include "main.h"
 #include "cramel.h"
 #include "dwt_counter.h"
+#include "math_helper.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -134,7 +135,7 @@ int main(void)
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
 	SystemCoreClockUpdate();
-  printf("\r\nINIT OK @ %d MHz\r\n",(uint32_t)SystemCoreClock/1000000);
+  printf("\r\nINIT ARMCC OK @ %d MHz\r\n",(uint32_t)SystemCoreClock/1000000);
 	
 	for (uint8_t u8_i = 0; u8_i < TX_LEN; u8_i++)
   {
@@ -157,8 +158,8 @@ int main(void)
 
 	  /* Calculate accuracy */
 	  vFunc_ConvertS16toFloat(s16_curfitLine, f32_curfitLine, RX_LEN);
-	  //f32_snr = arm_snr_f32(f32_curfitLineRef, f32_curfitLine, RX_LEN);
-	  //f32_accuracy = 100.0f - (100.0f / f32_snr);
+	  f32_snr = arm_snr_f32(f32_curfitLineRef, f32_curfitLine, RX_LEN);
+	  f32_accuracy = 100.0f - (100.0f / f32_snr);
 	  f32_accuracyFrame += f32_accuracy;
 
 	  /* Print to stdout */
@@ -196,7 +197,7 @@ void SystemClock_Config(void)
   /** Configure the main internal regulator output voltage
   */
   __HAL_RCC_PWR_CLK_ENABLE();
-  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE3);
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
@@ -218,7 +219,7 @@ void SystemClock_Config(void)
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
